@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  foundry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Foundry build
+        uses: actions/cache@v3
+        with:
+          path: ~/.foundry
+          key: ${{ runner.os }}-foundry-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-foundry-
+
+      - name: Install Foundry
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          echo 'export PATH="$HOME/.foundry/bin:$PATH"' >> $HOME/.bashrc
+          echo 'export PATH="$HOME/.foundry/bin:$PATH"' >> $HOME/.profile
+          source $HOME/.profile
+          source $HOME/.bashrc
+          ~/.foundry/bin/foundryup
+
+      - name: Verify Foundry Installation
+        run: |
+          echo "PATH: $PATH"
+          ls -la $HOME/.foundry/bin
+          forge --version
+
+      - name: Build Project
+        run: forge build --sizes
+
+      - name: Run Tests
+        run: forge test -vvv
+        env:
+          FOUNDRY_ETH_RPC_URL: https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
